@@ -2,24 +2,27 @@ import fcntl
 
 class communication :
 
-    def __init__(self, filename, mode):
-        self.file = open(filename, mode)
+    def __init__(self, vid, pid):
+	self.vid = vid
+	self.pid = pid
 
     def recive(self):
-        return self.file.read()
+        file = open(self.vid+"/"+self.pid, "r")
+	data = file.read()
+	file.close()
+        return data
 
     def send(self, messege):
-        self.file.write(messege)
-
-    def close(self):
-        self.file.close();
+        file = open(self.vid+"/"+self.pid, "a")
+        file.write(messege)
+	file.close()
 
     def ioctl(self, operation):
-        fcntl.ioctl(self.file, operation)
+        file = open(self.vid+"/"+self.pid, "r+")
+        fcntl.ioctl(file, operation)
+	file.close()
 
 if __name__ == "__main__":
-    como = communication("new file.txt", "r+")
+    como = communication("new", "new.txt")
     como.send("hello")
     print(como.recive())
-    como.close()
-
