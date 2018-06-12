@@ -4,14 +4,18 @@ from sys import getsizeof
 import os
 
 
+IN = "1"
+OUT = "2"
+
+
 def checkForEndPointNodes(dev, VID, PID, interface, endPoint):
 	for INn in range(1, 16):
-		if os.path.exists(dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/1" + "{0:02}".format(INn)) == False:
+		if os.path.exists(dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/" + IN + "{0:02}".format(INn)) == False:
 			break
 		print("IN"+str(INn))
 
 	for OUTn in range(1, 16):
-		if os.path.exists(dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/2" + "{0:02}".format(OUTn)) == False:
+		if os.path.exists(dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/" + OUT + "{0:02}".format(OUTn)) == False:
 			break
 		print("OUT"+str(OUTn))
 
