@@ -84,9 +84,9 @@ class communication:
 
 
 
-	def ioctl(self, VID, PID, interface, operation):
+	def ioctl(self, VID, PID, interface, endPoint, INn, request, requestType, value, index, size, operation):
 		file = open(self.dev + "/" + VID + "/" + PID + "/" + interface + "/" + "/00/00", "r+")
-		buffer = 0
-		fcntl.fcntl(file, operation, buffer)
-		return buffer
+		buffer = bitarray("{0:08b}".format(request) + "{0:08b}".format(requestType) + "{0:016b}".format(value) + "{0:016b}".format(index) + "{0:016b}".format(size) + "{0:016b}".format(0)).tobytes()
+		fcntl.ioctl(file, operation, buffer)
 		file.close()
+		return buffer
