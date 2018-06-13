@@ -1,4 +1,5 @@
 import Communication
+import StoppableThread
 import threading
 import time
 
@@ -57,7 +58,6 @@ OUT16 = Communication.OUT + "16"
 
 
 IOCTL_INTERRUPT_INTERVAL = 0
-IOCTL_INTERRUPT_STEP = 1
 
 
 class USB:
@@ -66,29 +66,26 @@ class USB:
 		self.PID = PID
 		self.interface = interface
 		self.comm = Communication.communication()
-		self.interruptInterval = self.comm.ioctl(self.VID, self.PID, self.interface, IOCTL_INTERRUPT_INTERVAL)
-		self.interruptStep = self.comm.ioctl(self.VID, self.PID, self.interface, IOCTL_INTERRUPT_STEP)
-
+		self.interruptInterval = self.comm.ioctl(self.VID, self.PID, self.interface, 0, 0, 0, 0, 0, 0, 0, IOCTL_INTERRUPT_INTERVAL)
 
 	def writeInterrupt(self, data, OUTn):
 	    	self.comm.sendData(self.VID, self.PID, self.interface, INTERRUPT, OUTn, 16, data)
 
 
-	def writeInterruptHandler(self, OUTn, interval = None, step = None, callBackFunction = None):
+	def writeInterruptHandler(self, OUTn, interval = None, callBackFunction = None):
 		if interval == None:
 			interval = self.interruptInterval
-		
-		if step == None:
-			step = self.interruptStep
 
-		threading.Thread(target = self.readInterruptCaller, args = (OUTn, interval, step, callBackFunction,)).start()
+		thread = threading.Thread(target = self.readInterruptCaller, args = (INn, interval, callBackFunction,))
+		thread.start()
+		return thread
 
 
-	def writeInterruptCaller(self, OUTn, interval, step, callBackFunction = None):
-		for i in range(1, interval, step):
+	def writeInterruptCaller(self, OUTn, interval, callBackFunction = None):
+		while True :
 			data = self.readInterrupt(OUTn)
 			callBackFunction(data)
-			time.sleep(step/1000)
+			time.sleep(interval/1000)
 
 
 	def readInterrupt(self, INn):
@@ -96,21 +93,19 @@ class USB:
 	    	return data
 
 	
-	def readInterruptHandler(self, INn, interval = None, step = None, callBackFunction = None):
+	def readInterruptHandler(self, INn, interval = None, callBackFunction = None):
 		if interval == None:
 			interval = self.interruptInterval
-		
-		if step == None:
-			step = self.interruptStep
-
-		threading.Thread(target = self.readInterruptCaller, args = (INn, interval, step, callBackFunction,)).start()
+		thread = threading.Thread(target = self.readInterruptCaller, args = (INn, interval, callBackFunction,))
+		thread.start()
+		return thread
 
 
-	def readInterruptCaller(self, INn, interval, step, callBackFunction = None):
-		for i in range(1, interval, step):
+	def readInterruptCaller(self, INn, interval, callBackFunction = None):
+		while True :
 			data = self.readInterrupt(INn)
 			callBackFunction(data)
-			time.sleep(step/1000)
+			time.sleep(interval/1000)
 
 
 	def writeBulk(self, OUTn, data):
@@ -128,7 +123,7 @@ class USB:
 
 
 def callback1(data):
-	print(data)
+	print("2")
 
 
 def callback2(data):
@@ -139,5 +134,7 @@ if __name__ == "__main__":
 	usb = USB("10", "10", "15")
 	usb.writeBulk(OUT15, 65)
 	print(usb.readBulk(IN1))
-	usb.readInterruptHandler(IN1, 2000, 1000, callback1)
-	usb.readInterruptHandler(IN1, 3000, 1000, callback2)
+	thread1 = usb.readInterruptHandler(IN1, 10000, callback1)
+	thread2 = usb.readInterruptHandler(IN1, 10000, callback2)
+
+	time.sleep(2)
