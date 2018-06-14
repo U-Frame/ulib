@@ -1,92 +1,93 @@
 import fcntl
 from bitarray import bitarray
-from sys import getsizeof
 import os
+import struct
+import array
 
 
-IN = "1"
-OUT = "2"
-
-
-def checkForEndPointNodes(dev, VID, PID, interface, endPoint):
-	for INn in range(1, 16):
-		if os.path.exists(dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/" + IN + "{0:02}".format(INn)) == False:
-			break
-		print("IN"+str(INn))
-
-	for OUTn in range(1, 16):
-		if os.path.exists(dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/" + OUT + "{0:02}".format(OUTn)) == False:
-			break
-		print("OUT"+str(OUTn))
-
-
-
-def availableEndpoints(dev, VID, PID, interface, endPoint):
-	if endPoint == "00":
-		print("control :")
-		checkForEndPointNodes(dev, VID, PID, interface, endPoint)
-	
-	elif endPoint == "01":
-		print("bulk :")
-		checkForEndPointNodes(dev, VID, PID, interface, endPoint)
-	
-	elif endPoint == "02":
-		print("interrupt :")
-		checkForEndPointNodes(dev, VID, PID, interface, endPoint)
-	
-	elif endPoint == "03":
-		print("isochronous:")
-		checkForEndPointNodes(dev, VID, PID, interface, endPoint)
+OUT = 0
+IN = 1
 
 
 
 class communication:
-	def __init__(self):
-		self.dev = "/home/samir/Documents/dev"
+	def __init__(self, vid, pid, interface):
+		self.vid = vid
+		self.pid = pid
+		self.interface = interface
+		self.root = "/home/samir/Documents/dev/uframe" + "/" + str(self.vid) + "/" + str(self.pid) + "/" + str(self.interface) + "/"
 
-	def recive(self, VID, PID, interface, endPoint, INn):
-		if os.path.exists(self.dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/" + INn):
-			file = open(self.dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/" + INn, "r")
-			data = bitarray()
-			data.frombytes(file.read())
-			file.close()
-			return data
-		
-		else:
-		    	print("no such endpoint ,printing available nodes :")
-			availableEndpoints(self.dev, VID, PID, interface, endPoint)
+	def checkForEndPointNodes(self, endPoint):
+		for OUTn in range(1, 16):
+			if os.path.exists(self.getPath(endPoint, OUTn)) == False:
+				break
+			print("OUT"+str(OUTn))
+		for INn in range(101, 116):
+			if os.path.exists(self.getPath(endPoint, INn)) == False:
+				break
+			print("IN"+str(INn%100))
+
+	def availableEndpoints(self, endPoint):
+		if endPoint == 0:
+			print("control :")
+			self.checkForEndPointNodes(endPoint)
+		elif endPoint == 1:
+			print("bulk :")
+			self.checkForEndPointNodes(endPoint)
+		elif endPoint == 2:
+			print("interrupt :")
+			self.checkForEndPointNodes(endPoint)
+		elif endPoint == 3:
+			print("isochronous:")
+			self.checkForEndPointNodes(endPoint)
+
+	def recive(self, endPoint, INn, request = None, requestType = None, value = None, index = None, size = None, data = None, operation = 1):
+		if request == None:
+			fd = self.getPath(endPoint, INn)
+			if os.path.exists(fd):
+				file = open(fd, "r+")
+				data = file.read()
+				file.close()
+				return data
 			
-
-	def sendWord(self, VID, PID, interface, endPoint, OUTn, request, requestType, value, index, size):
-		if os.path.exists(self.dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/" + OUTn):
-			messege = bitarray("{0:08b}".format(request) + "{0:08b}".format(requestType) + "{0:016b}".format(value) + "{0:016b}".format(index) + "{0:016b}".format(size))
-			file = open(self.dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/" + OUTn, "a")
-			file.write(messege.tobytes())
-			print(messege.tobytes())
+			else:
+				print("no such endpoint ,printing available nodes :")
+				self.availableEndpoints(endPoint)
+		else :
+			fd = self.getPath(endPoint, INn)
+			file = open(fd, "r+")
+			byteBuffer = bytearray(self.formRequestPacket(request, requestType, value, index, size))
+			for d in data :
+				byteBuffer.append(d)
+			tempBuffer = array.array("B", byteBuffer)
+			buffer = array.array("c", tempBuffer.tostring())
+			#print (buffer)
+			fcntl.ioctl(file, operation, buffer, 1)
+			file.close()
+			#print (buffer)
+			return buffer[8:].tostring()
+				
+				
+	def send(self, endPoint, OUTn, request = None, requestType = None, value = None, index = None, size = None, data = None):
+		fd = self.getPath(endPoint, OUTn)
+		messege = ""
+		if os.path.exists(fd):
+			if request != None:
+				messege = messege + self.formRequestPacket(request, requestType, value, index, size) 
+			if data != None:
+				messege = messege + data
+			file = open(fd, "w")
+			file.write(messege)
 			file.close()
 		
 		else:
 		    	print("no such endpoint ,printing available nodes :")
-			availableEndpoints(self.dev, VID, PID, interface, endPoint)
-
-
-	def sendData(self, VID, PID, interface, endPoint, OUTn, size, data):
-		if os.path.exists(self.dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/" + OUTn):
-			messege = bitarray("{0:0{width}b}".format(data, width=size))
-			file = open(self.dev + "/" + VID + "/" + PID + "/" + interface + "/" + endPoint + "/" + OUTn, "a")
-			file.write(messege.tobytes())
-			print(messege.tobytes())
-			file.close()
+			self.availableEndpoints(endPoint)
+			
 		
-		else:
-		    	print("no such endpoint ,printing available nodes :")
-			availableEndpoints(self.dev, VID, PID, interface, endPoint)
-
-
-
-	def ioctl(self, VID, PID, interface, endPoint, INn, request, requestType, value, index, size, operation):
-		file = open(self.dev + "/" + VID + "/" + PID + "/" + interface + "/" + "/00/00", "r+")
-		buffer = bitarray("{0:08b}".format(request) + "{0:08b}".format(requestType) + "{0:016b}".format(value) + "{0:016b}".format(index) + "{0:016b}".format(size) + "{0:016b}".format(0)).tobytes()
-		fcntl.ioctl(file, operation, buffer)
-		file.close()
-		return buffer
+	def getPath(self, endPoint, IOn):
+		return self.root + "{0:02}".format(endPoint) + "/" + "{0:03}".format(IOn)
+		
+	def formRequestPacket(self, request, requestType, value, index, size):
+		return bitarray("{0:08b}".format(request) + "{0:08b}".format(requestType) + "{0:<016b}".format(value) + "{0:<016b}".format(index) + "{0:<016b}".format(size)).tobytes()
+	
