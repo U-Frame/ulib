@@ -21,7 +21,7 @@ ISOCHRONOUS = 3
 # 02 -> OUT endpoint
 
 
-IN0 = 100
+IN0 = 001
 IN1 = 101
 IN2 = 102
 IN3 = 103
@@ -101,11 +101,12 @@ class USB:
 		while True :
 			data = self.readInterrupt(INn)
 			callBackFunction(data)
-			time.sleep(interval/1000)
+			time.sleep(interval/1000.0)
 
 
 	def readInterrupt(self, INn):
-	    	data = self.comm.recive(INTERRUPT, INn)
+	    	#data = self.comm.recive(INTERRUPT, INn)
+	    	data = self.comm.recive(1, 0)
 	    	return data
 
 	
