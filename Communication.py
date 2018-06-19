@@ -15,17 +15,18 @@ class communication:
 		self.vid = vid
 		self.pid = pid
 		self.interface = interface
-		self.root = "/home/samir/Documents/dev/uframe" + "/" + str(self.vid) + "/" + str(self.pid) + "/" + str(self.interface) + "/"
+		self.root = "/home/samir/Documents/dev/uframe" + "/" + self.vid + "/" + self.pid + "/" + self.interface + "/"
+		self.interruptWordLength = 0
 
 	def checkForEndPointNodes(self, endPoint):
-		for OUTn in range(1, 16):
+		for OUTn in range(0, 150, 10):
 			if os.path.exists(self.getPath(endPoint, OUTn)) == False:
 				break
-			print("OUT"+str(OUTn))
-		for INn in range(101, 116):
+			print( "OUT" + str( (int)(OUTn/10) ) ) 
+		for INn in range(1, 151, 10):
 			if os.path.exists(self.getPath(endPoint, INn)) == False:
 				break
-			print("IN"+str(INn%100))
+			print( "IN" + str( (int)(OUTn/10) ) ) 
 
 	def availableEndpoints(self, endPoint):
 		if endPoint == 0:
@@ -42,11 +43,13 @@ class communication:
 			self.checkForEndPointNodes(endPoint)
 
 	def recive(self, endPoint, INn, request = None, requestType = None, value = None, index = None, size = None, data = None, operation = 1):
+
+		fd = self.getPath(endPoint, INn)
+		print(fd)
 		if request == None:
-			fd = self.getPath(endPoint, INn)
 			if os.path.exists(fd):
-				file = open(fd, "r+")
-				data = file.read()
+				file = open(fd, "r")
+				data = file.read(self.interruptWordLength)
 				file.close()
 				return data
 			
@@ -54,17 +57,14 @@ class communication:
 				print("no such endpoint ,printing available nodes :")
 				self.availableEndpoints(endPoint)
 		else :
-			fd = self.getPath(endPoint, INn)
 			file = open(fd, "r+")
 			byteBuffer = bytearray(self.formRequestPacket(request, requestType, value, index, size))
 			for d in data :
 				byteBuffer.append(d)
 			tempBuffer = array.array("B", byteBuffer)
 			buffer = array.array("c", tempBuffer.tostring())
-			#print (buffer)
 			fcntl.ioctl(file, operation, buffer, 1)
 			file.close()
-			#print (buffer)
 			return buffer[8:].tostring()
 				
 				
@@ -86,8 +86,8 @@ class communication:
 			
 		
 	def getPath(self, endPoint, IOn):
-		return self.root + "{0:02}".format(endPoint) + "/" + "{0:03}".format(IOn)
+		return self.root + endPoint + "/" + "{0:03}".format(IOn)
 		
 	def formRequestPacket(self, request, requestType, value, index, size):
 		return bitarray("{0:08b}".format(request) + "{0:08b}".format(requestType) + "{0:<016b}".format(value) + "{0:<016b}".format(index) + "{0:<016b}".format(size)).tobytes()
-	
+
