@@ -1,75 +1,64 @@
 import Communication
-import StoppableThread
 import threading
 import time
+import fcntl
+import array
 
 
-# 00 -> control endpoint
-# 01 -> bulk endpoint
-# 02 -> interrupt endpoint
-# 03 -> ISOCHRONOUS endpoint
+# 0 -> control (SETUP) endpoint
+# 1 -> IN endpoint
+# 0 -> OUT endpoint
 
+CONTROL = "Control"
+BULK = "Bulk"
+INTERRUPT = "Interrupt"
+ISOCHRONOUS = "Isochronous"
 
-CONTROL = 0
-BULK = 1
-INTERRUPT = 2
-ISOCHRONOUS = 3
-
-
-# 00 -> control (SETUP) endpoint
-# 01 -> IN endpoint
-# 02 -> OUT endpoint
-
-
-SETUP = 0
-IN0 = 100
-IN1 = 101
-IN2 = 102
-IN3 = 103
-IN4 = 104
-IN5 = 105
-IN6 = 106
-IN7 = 107
-IN8 = 108
-IN9 = 109
-IN10 = 110
+IN0 = 1
+IN1 = 11
+IN2 = 21
+IN3 = 31
+IN4 = 41
+IN5 = 51
+IN6 = 61
+IN7 = 71
+IN8 = 81
+IN9 = 91
+IN10 = 101
 IN11 = 111
-IN12 = 112
-IN13 = 113
-IN14 = 114
-IN15 = 115
-IN16 = 116
+IN12 = 121
+IN13 = 131
+IN14 = 141
+IN15 = 151
 
 OUT0 = 0
-OUT1 = 1
-OUT2 = 2
-OUT3 = 3
-OUT4 = 4
-OUT5 = 5
-OUT6 = 6
-OUT7 = 7
-OUT8 = 8
-OUT9 = 9
-OUT10 = 10
-OUT11 = 11
-OUT12 = 12
-OUT13 = 13
-OUT14 = 14
-OUT15 = 15
-OUT16 = 16
-
+OUT1 = 10
+OUT2 = 20
+OUT3 = 30
+OUT4 = 40
+OUT5 = 50
+OUT6 = 60
+OUT7 = 70
+OUT8 = 80
+OUT9 = 90
+OUT10 = 100
+OUT11 = 110
+OUT12 = 120
+OUT13 = 130
+OUT14 = 140
+OUT15 = 150
 
 IOCTL_INTERRUPT_INTERVAL = 0
 
 
 class USB:
 	def __init__(self, vid, pid, interface):
+
 		self.vid = vid
 		self.pid = pid
 		self.interface = interface
-		self.comm = Communication.communication()
-		#self.interruptInterval = self.comm.ioctl(vid, pid, interface, 0, 0, 0, 0, 0, 0, IN0, IOCTL_INTERRUPT_INTERVAL)
-		self.interruptInterval = 1000
+		self.comm = Communication.communication(vid, pid, interface)
+		self.interruptInterval = 10
 
 	def writeInterruptHandler(self, OUTn, interval = None, callBackFunction = None):
 		if interval == None:
@@ -81,13 +70,13 @@ class USB:
 		
 	def writeInterruptCaller(self, OUTn, interval, callBackFunction = None):
 		while True :
-			data = self.writeInterrupt(OUTn)
-			callBackFunction(data)
+			data = callBackFunction()
+			self.writeInterrupt(len(data), data, OUTn)
 			time.sleep(interval/1000)
 
 
 	def writeInterrupt(self, size, data, OUTn):
-	    	self.comm.sendData(self.vid, self.vid, self.interface, INTERRUPT, OUTn, size, data)
+	    	self.comm.send(INTERRUPT, OUTn, size, data)
 
 
 	def readInterruptHandler(self, INn, interval = None, callBackFunction = None):
@@ -102,28 +91,30 @@ class USB:
 		while True :
 			data = self.readInterrupt(INn)
 			callBackFunction(data)
-			time.sleep(interval/1000)
+			time.sleep(interval/1000.0)
 
 
 	def readInterrupt(self, INn):
-	    	data = self.comm.recive(self.vid, self.pid, self.interface, INTERRUPT, INn)
+	    	data = self.comm.recive(INTERRUPT, INn)
 	    	return data
 
 	
-	def writeBulk(self, OUTn, size, data):
-	    	self.comm.sendData(self.vid, self.pid, self.interface, BULK, OUTn, size, data)
+	def writeBulk(self, OUTn, Size, Data):
+	    	self.comm.send(INTERRUPT, OUTn, size = Size, data = Data)
 
 
 	def readBulk(self, INn):
-	    	data = self.comm.recive(self.vid, self.pid, self.interface, BULK, INn)
+	    	data = self.comm.recive(INTERRUPT, INn)
 	    	return data
 
 
-	def writeControl(self, request, requestType, value, index, size, data):
-		self.comm.sendWord(self.VID, self.PID, self.interface, SETUP, request, requestType, value, index, size)
-		self.comm.sendData(self.VID, self.PID, self.interface, size, data)
-
-
+	def writeControl(self, request, requestType, value, index, size, data = None):
+		self.comm.send(CONTROL, 1, request, requestType, value, index, size, data)
+		
+	def readControl(self, request, requestType, value, index, size, data):
+		return self.comm.recive(CONTROL, 0, request, requestType, value, index, size, data)
+	
+	
 def callback1(data):
 	print("2")
 
