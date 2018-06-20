@@ -1,0 +1,49 @@
+# 0 -> control (SETUP) endpoint
+# 1 -> IN endpoint
+# 0 -> OUT endpoint
+
+CONTROL = "Control"
+BULK = "Bulk"
+INTERRUPT = "Interrupt"
+ISOCHRONOUS = "Isochronous"
+
+IN0 = 1
+IN1 = 11
+IN2 = 21
+IN3 = 31
+IN4 = 41
+IN5 = 51
+IN6 = 61
+IN7 = 71
+IN8 = 81
+IN9 = 91
+IN10 = 101
+IN11 = 111
+IN12 = 121
+IN13 = 131
+IN14 = 141
+IN15 = 151
+
+OUT0 = 0
+OUT1 = 10
+OUT2 = 20
+OUT3 = 30
+OUT4 = 40
+OUT5 = 50
+OUT6 = 60
+OUT7 = 70
+OUT8 = 80
+OUT9 = 90
+OUT10 = 100
+OUT11 = 110
+OUT12 = 120
+OUT13 = 130
+OUT14 = 140
+OUT15 = 150
+
+IOCTL_INTERRUPT_INTERVAL = 0
+IOCTL_CONTROL_READ = 1
+IOCTL_INTERRUPT_LENGTH = 0
+
+OUT = 0
+IN = 1
